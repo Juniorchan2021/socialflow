@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocialFlow — 社媒合规与增长检测</title>
+<style>
+:root {
+    --bg: #F5F5F7;
+    --surface: #FFFFFF;
+    --surface-2: #F5F5F7;
+    --surface-3: #E8E8ED;
+    --text-1: #1D1D1F;
+    --text-2: #6E6E73;
+    --text-3: #AEAEB2;
+    --blue: #0071E3;
+    --blue-hover: #0077ED;
+    --green: #30D158;
+    --orange: #FF9F0A;
+    --red: #FF3B30;
+    --yellow: #FFD60A;
+    --separator: rgba(0,0,0,0.06);
+    --card-shadow: 0 2px 16px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.04);
+    --card-radius: 18px;
+    --font: -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font); background: var(--bg); color: var(--text-1); min-height: 100vh; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+/* ── Layout ── */
+.container { max-width: 860px; margin: 0 auto; padding: 0 20px 80px; }
+
+/* ── Header ── */
+header { text-align: center; padding: 72px 0 52px; }
+.logo { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); margin-bottom: 14px; }
+h1 { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; color: var(--text-1); margin-bottom: 10px; }
+.subtitle { font-size: 17px; color: var(--text-2); font-weight: 400; }
+
+/* ── Platform selector ── */
+.platform-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap; }
+.platform-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 20px; border-radius: 50px;
+    border: 1.5px solid var(--separator); background: var(--surface);
+    color: var(--text-2); cursor: pointer; font-size: 14px; font-weight: 500;
+    transition: all 0.2s; font-family: var(--font);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.platform-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(0,113,227,0.3); }
+.platform-btn:hover:not(.active) { border-color: #C7C7CC; color: var(--text-1); }
+
+/* ── Cards ── */
+.card { background: var(--surface); border-radius: var(--card-radius); box-shadow: var(--card-shadow); padding: 28px; margin-bottom: 16px; }
+
+/* ── Input group ── */
+.input-group { margin-bottom: 20px; }
+.input-label {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 9px; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2);
+}
+.char-counter { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+.char-ring { width: 20px; height: 20px; transform: rotate(-90deg); }
+.char-ring-track { fill: none; stroke: var(--surface-3); stroke-width: 2.5; }
+.char-ring-fill { fill: none; stroke-width: 2.5; stroke-linecap: round; transition: stroke-dasharray 0.3s, stroke 0.3s; }
+textarea {
+    width: 100%; padding: 13px 15px; border-radius: 12px;
+    border: 1.5px solid var(--surface-3); background: var(--surface-2);
+    color: var(--text-1); font-size: 15px; resize: vertical; min-height: 88px;
+    font-family: var(--font); transition: border-color 0.2s, box-shadow 0.2s;
+}
+textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,113,227,0.1); }
+textarea#contentInput { min-height: 140px; }
+
+/* Platform hints */
+.platform-hints { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.hint-pill {
+    font-size: 11px; color: var(--text-2); background: var(--surface-2);
+    border: 1px solid var(--separator); border-radius: 20px; padding: 4px 10px;
+}
+
+/* ── Button ── */
+.btn-primary {
+    width: 100%; padding: 16px; border-radius: 14px; border: none;
+    background: var(--blue); color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: var(--font);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary:hover:not(:disabled) { background: var(--blue-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,113,227,0.35); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Results ── */
+.results { display: none; margin-top: 8px; }
+.results.show { display: block; animation: slideUp 0.4s cubic-bezier(0.25, 0.1, 0.25, 1); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Platform tabs */
+.tabs { display: flex; gap: 0; margin-bottom: 16px; background: var(--surface); border-radius: 14px; padding: 4px; box-shadow: var(--card-shadow); overflow: hidden; }
+.tab {
+    flex: 1; padding: 9px 12px; border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-weight: 500; text-align: center; transition: all 0.2s;
+    color: var(--text-2); border: none; background: transparent; font-family: var(--font);
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.tab.active { background: var(--blue); color: #fff; box-shadow: 0 1px 6px rgba(0,113,227,0.3); }
+.tab-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+
+/* Result panel */
+.result-panel { display: none; }
+.result-panel.active { display: block; }
+
+/* Status banner */
+.status-banner {
+    border-radius: 12px; padding: 13px 18px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500;
+}
+.status-banner.safe    { background: rgba(48,209,88,0.1);  color: #1A7F42; }
+.status-banner.warning { background: rgba(255,159,10,0.1); color: #9A5C00; }
+.status-banner.danger  { background: rgba(255,59,48,0.1);  color: #C0392B; }
+.status-icon { font-size: 18px; }
+
+/* Score rings grid */
+.scores-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.score-item {
+    background: var(--surface); border-radius: 16px; box-shadow: var(--card-shadow);
+    padding: 20px 12px; text-align: center; display: flex; flex-direction: column; align-items: center;
+}
+.score-ring-wrap { position: relative; width: 72px; height: 72px; margin-bottom: 10px; }
+.score-ring-svg { width: 72px; height: 72px; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--surface-3); stroke-width: 5; }
+.ring-fill { fill: none; stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray 0.8s cubic-bezier(0.25, 0.1, 0.25, 1); }
+.score-num-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 20px; font-weight: 700; letter-spacing: -0.03em;
+}
+.score-label { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Content type badge */
+.type-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(0,113,227,0.08); color: var(--blue);
+    border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    margin-bottom: 20px;
+}
+
+/* Section headers */
+.section-title { font-size: 13px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 24px; }
+
+/* Violation cards */
+.violation-card {
+    border-radius: 12px; padding: 13px 15px; margin-bottom: 8px;
+    border-left: 3px solid; display: flex; flex-direction: column; gap: 3px;
+}
+.violation-name { font-size: 13px; font-weight: 600; }
+.violation-keyword { font-size: 12px; opacity: 0.7; }
+.violation-card.critical { background: rgba(255,59,48,0.06); border-color: #FF3B30; }
+.violation-card.high     { background: rgba(255,159,10,0.06); border-color: #FF9F0A; }
+.violation-card.medium   { background: rgba(255,214,10,0.06); border-color: #FFD60A; }
+.violation-card.low      { background: rgba(48,209,88,0.06);  border-color: #30D158; }
+
+/* Optimization cards */
+.opt-card {
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+    border-left: 3.5px solid; background: var(--surface-2);
+}
+.opt-card.critical { border-color: #FF3B30; }
+.opt-card.high     { border-color: #FF9F0A; }
+.opt-card.medium   { border-color: var(--blue); }
+.opt-card.low      { border-color: #AEAEB2; }
+.opt-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.opt-priority-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px;
+}
+.badge-critical { background: rgba(255,59,48,0.12); color: #FF3B30; }
+.badge-high     { background: rgba(255,159,10,0.12); color: #9A5C00; }
+.badge-medium   { background: rgba(0,113,227,0.1);  color: var(--blue); }
+.badge-low      { background: rgba(174,174,178,0.2); color: #6E6E73; }
+.opt-category { font-size: 12px; font-weight: 600; color: var(--text-1); }
+.opt-issue { font-size: 13px; color: var(--text-1); font-weight: 500; }
+.opt-action { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.opt-example { font-size: 12px; color: var(--text-2); margin-top: 6px; padding: 7px 10px; background: rgba(0,0,0,0.04); border-radius: 7px; font-style: italic; }
+
+/* Hashtag chips */
+.hashtag-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.hashtag-chip {
+    padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    background: rgba(0,113,227,0.08); color: var(--blue); cursor: pointer;
+    border: 1px solid rgba(0,113,227,0.15); transition: all 0.15s;
+    user-select: none;
+}
+.hashtag-chip:hover { background: rgba(0,113,227,0.15); transform: translateY(-1px); }
+.hashtag-chip.copied { background: rgba(48,209,88,0.12); color: #1A7F42; border-color: rgba(48,209,88,0.2); }
+
+/* Viral formulas */
+.formula-card {
+    background: var(--surface-2); border-radius: 12px; padding: 14px 16px;
+    margin-bottom: 10px; border: 1px solid var(--separator);
+}
+.formula-pattern { font-size: 13px; font-weight: 600; color: var(--text-1); margin-bottom: 5px; font-family: 'SF Mono', 'Courier New', monospace; }
+.formula-example { font-size: 13px; color: var(--blue); margin-bottom: 5px; font-style: italic; }
+.formula-why { font-size: 12px; color: var(--text-2); }
+
+/* Divider */
+.divider { height: 1px; background: var(--separator); margin: 20px 0; }
+
+/* All-clear state */
+.all-clear {
+    background: rgba(48,209,88,0.08); border: 1px solid rgba(48,209,88,0.2);
+    border-radius: 12px; padding: 14px 16px; color: #1A7F42; font-size: 14px; font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
+}
+
+/* Footer */
+footer { text-align: center; padding: 40px 20px; color: var(--text-3); font-size: 12px; }
+
+/* ── AI Analysis Section ── */
+.ai-section {
+    margin-top: 24px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(0,113,227,0.12);
+}
+.ai-header {
+    background: linear-gradient(135deg, #0071E3 0%, #5856D6 100%);
+    padding: 13px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.ai-badge {
+    color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 6px;
+}
+.ai-model-tag {
+    background: rgba(255,255,255,0.2); color: #fff;
+    font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px;
+}
+.ai-body { padding: 18px; background: rgba(88,86,214,0.04); }
+.ai-insight {
+    font-size: 14px; color: var(--text-1); line-height: 1.7;
+    padding: 12px 14px; background: rgba(0,113,227,0.06);
+    border-radius: 10px; margin-bottom: 16px; border-left: 3px solid var(--blue);
+}
+.ai-rewrite { margin-bottom: 16px; }
+.ai-rewrite-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-2); margin-bottom: 8px;
+}
+.ai-rewrite-box {
+    background: var(--surface); border-radius: 12px; padding: 14px 16px;
+    border: 1px solid var(--separator); font-size: 14px; line-height: 1.7;
+    color: var(--text-1); white-space: pre-wrap;
+}
+.ai-rewrite-title-text {
+    font-weight: 600; color: var(--blue); margin-bottom: 8px;
+    font-size: 15px; display: block;
+}
+.copy-btn {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+    padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(0,113,227,0.3);
+    background: rgba(0,113,227,0.06); color: var(--blue); font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: var(--font);
+}
+.copy-btn:hover { background: rgba(0,113,227,0.12); }
+.copy-btn.copied { background: rgba(48,209,88,0.1); color: #1A7F42; border-color: rgba(48,209,88,0.3); }
+.ai-extra-tips { margin-top: 4px; }
+.ai-tip-item {
+    font-size: 13px; color: var(--text-2); padding: 7px 0;
+    border-bottom: 1px solid var(--separator);
+    display: flex; align-items: flex-start; gap: 8px;
+}
+.ai-tip-item:last-child { border-bottom: none; }
+.ai-tip-dot { color: #5856D6; font-size: 16px; line-height: 1.4; flex-shrink: 0; }
+.ai-loading {
+    display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+    background: rgba(88,86,214,0.04); color: var(--text-2); font-size: 13px;
+}
+.ai-loading-spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(88,86,214,0.2);
+    border-top-color: #5856D6; border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    h1 { font-size: 34px; }
+    .scores-grid { grid-template-columns: repeat(2, 1fr); }
+    .card { padding: 20px; }
+}
+@media (max-width: 400px) {
+    .scores-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <div class="logo">SocialFlow</div>
+        <h1>内容合规 & 增长检测</h1>
+        <p class="subtitle">检测违规风险 · 分析互动潜力 · 提供平台专属优化建议</p>
+    </header>
+
+    <!-- Platform selector -->
+    <div class="platform-row">
+        <button class="platform-btn active" onclick="togglePlatform(this,'xhs')">📕 小红书</button>
+        <button class="platform-btn active" onclick="togglePlatform(this,'twitter')">🐦 Twitter / X</button>
+        <button class="platform-btn active" onclick="togglePlatform(this,'facebook')">📘 Facebook</button>
+    </div>
+
+    <!-- Input card -->
+    <div class="card">
+        <div class="input-group">
+            <div class="input-label">
+                <span>标题 / Title</span>
+                <div class="char-counter">
+                    <svg class="char-ring" viewBox="0 0 20 20">
+                        <circle class="char-ring-track" cx="10" cy="10" r="8"/>
+                        <circle class="char-ring-fill" id="titleRing" cx="10" cy="10" r="8" stroke-dasharray="0 50.3" stroke="#30D158"/>
+                    </svg>
+                    <span id="titleCount">0</span>
+                </div>
+            </div>
+            <textarea id="titleInput" placeholder="输入内容标题… （小红书建议 10-20 字；Twitter / Facebook 无需填写标题）" oninput="onTitleInput()"></textarea>
+        </div>
+
+        <div class="input-group">
+            <div class="input-label">
+                <span>正文 / Content</span>
+                <div class="char-counter">
+                    <svg class="char-ring" viewBox="0 0 20 20">
+                        <circle class="char-ring-track" cx="10" cy="10" r="8"/>
+                        <circle class="char-ring-fill" id="contentRing" cx="10" cy="10" r="8" stroke-dasharray="0 50.3" stroke="#30D158"/>
+                    </svg>
+                    <span id="contentCount">0</span>
+                </div>
+            </div>
+            <textarea id="contentInput" placeholder="粘贴要检测的内容…" oninput="onContentInput()"></textarea>
+            <div class="platform-hints" id="platformHints"></div>
+        </div>
+
+        <button class="btn-primary" id="analyzeBtn" onclick="analyze()">
+            <span id="btnIcon">🔍</span>
+            <span id="btnText">开始检测</span>
+        </button>
+    </div>
+
+    <!-- Results -->
+    <div class="results" id="results">
+        <div class="tabs" id="tabs"></div>
+        <div id="resultPanels"></div>
+    </div>
+
+</div>
+
+<footer>
+    <p>SocialFlow v5.0 &nbsp;·&nbsp; 基于平台公开算法研究与最佳实践构建 &nbsp;·&nbsp; 关键词规则持续更新</p>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let selectedPlatforms = ['xhs', 'twitter', 'facebook'];
+let activeTab = 'xhs';
+
+const PLATFORM_INFO = {
+    xhs:      { name: '小红书',   icon: '📕', titleMax: 20, contentMin: 150, contentMax: 1000 },
+    twitter:  { name: 'Twitter/X', icon: '🐦', titleMax: 0,  contentMin: 30,  contentMax: 280 },
+    facebook: { name: 'Facebook',  icon: '📘', titleMax: 0,  contentMin: 40,  contentMax: 500 }
+};
+
+// Client-side rules (mirror of server PLATFORM_RULES for fallback)
+const RULES = {
+    xhs: {
+        critical: { name:'严重违规（封号风险）', color:'#FF3B30', keywords:['crypto','cryptocurrency','比特币','以太坊','炒币','币圈','交易所','binance','币安','欧易','okx','合约','杠杆','挖矿','矿机','空投','airdrop','ico','私募','defi','nft','钱包私钥','助记词','资金盘','传销','拉人头','返利','刷单','博彩','赌球','赌博','六合彩','代理','加盟','躺赚','日入过万','财富自由'] },
+        high:     { name:'高风险（引流导流）',   color:'#FF9500', keywords:['微信','VX','vx','V信','wechat','qq','QQ','二维码','加群','进群','私信','私聊','加我','联系我','WX','威信','telegram','tg','whatsapp','私域','引流','后台发我','评论发我'] },
+        medium:   { name:'中风险（互动诱导）',   color:'#FFCC00', keywords:['点赞','收藏','关注','评论','转发','求赞','互粉','互赞','回关','关注有礼','关注送','私信领取','求关注','一键三连','双击','点个赞'] },
+        low:      { name:'低风险（夸大宣传）',   color:'#34C759', keywords:['最便宜','绝对有效','百分百','100%','假一罚十','全网最低','史上最低价','错过等一年','保证效果','疗效','治愈','根治'] }
+    },
+    twitter: {
+        critical: { name:'Policy Violation', color:'#FF3B30', keywords:['hate speech','racial slur','terrorism','terrorist','child abuse','csam','self-harm','buy followers','fake engagement','buy retweets','doxxing','swatting'] },
+        high:     { name:'High Risk',        color:'#FF9500', keywords:['spam','mass dm','follow/unfollow','aggressive following','manipulation','fake account','astroturfing','brigading'] },
+        medium:   { name:'Engagement Bait',  color:'#FFCC00', keywords:['please retweet','rt for rt','follow back','follow for follow','f4f','like for like','l4l','retweet if you agree'] },
+        low:      { name:'Minor Concern',    color:'#34C759', keywords:['check bio','link in bio','dm me','message me'] }
+    },
+    facebook: {
+        critical: { name:'Community Standard Violation', color:'#FF3B30', keywords:['hate speech','discrimination','violence','terrorism','fake news','misinformation','election interference','voter suppression','conspiracy theory','deepfake'] },
+        high:     { name:'Reduced Distribution Risk',   color:'#FF9500', keywords:["clickbait","you won't believe","shocking truth","they don't want you to know","share to win","comment to enter","like and share to win"] },
+        medium:   { name:'Engagement Bait',             color:'#FFCC00', keywords:['like this post','share if you agree','tag someone who','type yes if','like for good luck','share for blessings','1 like ='] },
+        low:      { name:'Minor Concern',               color:'#34C759', keywords:['click the link','limited time','act now','hurry','last chance','buy now','shop now'] }
+    }
+};
+
+// ─────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function scoreColor(s) {
+    return s >= 80 ? '#30D158' : s >= 55 ? '#FF9F0A' : '#FF3B30';
+}
+
+// SVG ring (r=31, circumference ≈ 194.8)
+function scoreRing(score, color) {
+    const circ = 194.8;
+    const fill = Math.max(0, Math.min(score, 100)) / 100 * circ;
+    return `
+        <div class="score-ring-wrap">
+            <svg class="score-ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="31"/>
+                <circle class="ring-fill" cx="40" cy="40" r="31"
+                    stroke="${color}"
+                    stroke-dasharray="${fill.toFixed(1)} ${circ}"
+                    transform="rotate(-90 40 40)"/>
+            </svg>
+            <span class="score-num-center" style="color:${color}">${score}</span>
+        </div>`;
+}
+
+// ─────────────────────────────────────────────
+// Character counter rings
+// ─────────────────────────────────────────────
+const RING_CIRC = 50.3; // 2π*8
+
+function updateCharRing(ringId, countId, current, limit) {
+    const ringEl = document.getElementById(ringId);
+    const countEl = document.getElementById(countId);
+    if (!ringEl || !countEl) return;
+    countEl.textContent = current;
+    if (limit <= 0) {
+        ringEl.style.strokeDasharray = '0 ' + RING_CIRC;
+        ringEl.style.stroke = '#AEAEB2';
+        return;
+    }
+    const pct = Math.min(current / limit, 1);
+    const fill = pct * RING_CIRC;
+    const color = pct < 0.8 ? '#30D158' : pct < 0.95 ? '#FF9F0A' : '#FF3B30';
+    ringEl.style.strokeDasharray = `${fill.toFixed(2)} ${RING_CIRC}`;
+    ringEl.style.stroke = color;
+}
+
+function onTitleInput() {
+    const val = document.getElementById('titleInput').value;
+    // Use XHS limit if selected, else show neutral
+    const limit = selectedPlatforms.includes('xhs') ? 20 : 0;
+    updateCharRing('titleRing', 'titleCount', val.length, limit);
+    updatePlatformHints();
+}
+
+function onContentInput() {
+    const val = document.getElementById('contentInput').value;
+    // Use tightest selected limit for the ring
+    const limits = selectedPlatforms.map(p => PLATFORM_INFO[p].contentMax).filter(l => l < 10000);
+    const limit = limits.length ? Math.min(...limits) : 0;
+    updateCharRing('contentRing', 'contentCount', val.length, limit);
+}
+
+function updatePlatformHints() {
+    const hints = document.getElementById('platformHints');
+    if (!hints) return;
+    const pills = selectedPlatforms.map(p => {
+        const info = PLATFORM_INFO[p];
+        const tLimit = info.contentMax < 10000 ? `限 ${info.contentMax} 字符` : `建议 ${info.contentMin}+ 字`;
+        return `<span class="hint-pill">${info.icon} ${info.name}: ${tLimit}</span>`;
+    });
+    hints.innerHTML = pills.join('');
+}
+
+// ─────────────────────────────────────────────
+// Platform toggle
+// ─────────────────────────────────────────────
+function togglePlatform(btn, platform) {
+    if (selectedPlatforms.includes(platform)) {
+        if (selectedPlatforms.length > 1) {
+            selectedPlatforms = selectedPlatforms.filter(p => p !== platform);
+            btn.classList.remove('active');
+        }
+    } else {
+        selectedPlatforms.push(platform);
+        btn.classList.add('active');
+    }
+    updatePlatformHints();
+    onContentInput();
+}
+
+// ─────────────────────────────────────────────
+// Analyze
+// ─────────────────────────────────────────────
+async function analyze() {
+    const title = document.getElementById('titleInput').value.trim();
+    const content = document.getElementById('contentInput').value.trim();
+
+    if (!content && !title) { showToast('请输入内容后再检测'); return; }
+
+    const MAX = 5000;
+    if (title.length > MAX || content.length > MAX) {
+        showToast(`内容过长，单字段最多 ${MAX} 字符`);
+        return;
+    }
+
+    const btn = document.getElementById('analyzeBtn');
+    const btnIcon = document.getElementById('btnIcon');
+    const btnText = document.getElementById('btnText');
+    btn.disabled = true;
+    btnIcon.outerHTML = '<span class="spinner" id="btnIcon"></span>';
+    btnText.textContent = '检测中…';
+
+    try {
+        const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content, platforms: selectedPlatforms })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '分析失败');
+
+        renderResults(json.data, title, content);
+    } catch (err) {
+        console.warn('API failed, using fallback:', err);
+        const fallback = fallbackAnalyze(title, content);
+        renderResults(fallback, title, content);
+        showToast('⚠️ 服务离线，已使用本地规则检测（功能受限）');
+    }
+
+    // Restore button
+    const spinnerEl = document.getElementById('btnIcon');
+    if (spinnerEl) spinnerEl.outerHTML = '<span id="btnIcon">🔍</span>';
+    document.getElementById('btnText').textContent = '开始检测';
+    btn.disabled = false;
+}
+
+// ─────────────────────────────────────────────
+// Render results
+// ─────────────────────────────────────────────
+function renderResults(data, title, content) {
+    // Set first tab active
+    activeTab = data[0]?.platform || selectedPlatforms[0];
+
+    // Build tabs
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = data.map(item => {
+        const statusDot = item.status === 'safe' ? '#30D158' : item.status === 'warning' ? '#FF9F0A' : '#FF3B30';
+        return `<button class="tab ${item.platform === activeTab ? 'active' : ''}"
+            onclick="switchTab('${item.platform}')" id="tab-${item.platform}">
+            ${item.platformIcon} ${item.platformName}
+            <span class="tab-dot" style="background:${statusDot}"></span>
+        </button>`;
+    }).join('');
+
+    // Build panels
+    const panelsEl = document.getElementById('resultPanels');
+    panelsEl.innerHTML = data.map(item => renderPanel(item, title, content)).join('');
+
+    const resultsEl = document.getElementById('results');
+    resultsEl.classList.add('show');
+    resultsEl.style.display = 'block';
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchTab(platform) {
+    activeTab = platform;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.result-panel').forEach(p => p.classList.remove('active'));
+    const tabEl = document.getElementById('tab-' + platform);
+    const panelEl = document.getElementById('panel-' + platform);
+    if (tabEl) tabEl.classList.add('active');
+    if (panelEl) panelEl.classList.add('active');
+}
+
+function renderPanel(item, title, content) {
+    const { platform, platformName, platformIcon, complianceScore, engagementScore, viralScore,
+        readabilityScore, violations, optimizations, hashtagSuggestions, viralFormulas,
+        contentType, contentTypeInfo, status } = item;
+
+    const isActive = platform === activeTab;
+
+    // Status banner
+    const statusMap = {
+        safe:    { icon: '✓', text: '内容合规，可以发布', cls: 'safe' },
+        warning: { icon: '⚠', text: '存在风险，建议优化后发布', cls: 'warning' },
+        danger:  { icon: '✕', text: '违规风险较高，请修改后再发布', cls: 'danger' }
+    };
+    const st = statusMap[status] || statusMap.warning;
+
+    // Scores
+    const scoresHtml = `
+        <div class="scores-grid">
+            ${renderScore(complianceScore, platform === 'xhs' ? '合规分' : 'Compliance')}
+            ${renderScore(engagementScore, platform === 'xhs' ? '互动潜力' : 'Engagement')}
+            ${renderScore(viralScore,      platform === 'xhs' ? 'Viral 潜力' : 'Viral Score')}
+            ${renderScore(readabilityScore,platform === 'xhs' ? '可读性' : 'Readability')}
+        </div>`;
+
+    // Content type badge
+    const typeBadge = contentTypeInfo
+        ? `<div class="type-badge">${contentTypeInfo.icon} ${platform === 'xhs' ? contentTypeInfo.label : contentTypeInfo.labelEn} · 自动识别内容类型</div>`
+        : '';
+
+    // Violations
+    let violationsHtml = '';
+    if (violations && violations.length > 0) {
+        violationsHtml = `
+            <div class="section-title">⚠️ 检测到 ${violations.length} 个问题</div>
+            ${violations.map(v => `
+                <div class="violation-card ${v.level}" style="border-left-color:${escapeHtml(v.color)}">
+                    <span class="violation-name" style="color:${escapeHtml(v.color)}">${escapeHtml(v.name)}</span>
+                    <span class="violation-keyword">触发词：${escapeHtml(v.keyword)}</span>
+                </div>`).join('')}`;
+    } else {
+        violationsHtml = `
+            <div class="section-title">${platform === 'xhs' ? '违规检测' : 'Compliance Check'}</div>
+            <div class="all-clear">✓ 未检测到违规内容，可安全发布</div>`;
+    }
+
+    // Optimizations
+    let optHtml = '';
+    if (optimizations && optimizations.length > 0) {
+        optHtml = `<div class="section-title">💡 ${platform === 'xhs' ? '优化建议' : 'Optimization Tips'}</div>`;
+        ['critical','high','medium','low'].forEach(pri => {
+            const items = optimizations.filter(o => o.priority === pri);
+            items.forEach(o => {
+                const badgeClass = `badge-${pri}`;
+                const priLabel = { critical:'紧急', high:'重要', medium:'建议', low:'可选' }[pri] || pri;
+                optHtml += `
+                    <div class="opt-card ${pri}">
+                        <div class="opt-header">
+                            <span class="opt-priority-badge ${badgeClass}">${escapeHtml(priLabel)}</span>
+                            <span class="opt-category">${escapeHtml(o.category)}</span>
+                        </div>
+                        <div class="opt-issue">${escapeHtml(o.issue)}</div>
+                        <div class="opt-action">${escapeHtml(o.action)}</div>
+                        ${o.example ? `<div class="opt-example">${escapeHtml(o.example)}</div>` : ''}
+                    </div>`;
+            });
+        });
+    }
+
+    // Hashtag suggestions
+    let hashtagHtml = '';
+    if (hashtagSuggestions && hashtagSuggestions.length > 0) {
+        hashtagHtml = `
+            <div class="section-title">🏷️ ${platform === 'xhs' ? '推荐话题标签' : 'Suggested Hashtags'}</div>
+            <div class="hashtag-grid">
+                ${hashtagSuggestions.map(h => `
+                    <span class="hashtag-chip" onclick="copyHashtag(this,'${escapeHtml(h)}')">${escapeHtml(h)}</span>`).join('')}
+            </div>`;
+    }
+
+    // Viral formulas
+    let formulasHtml = '';
+    if (viralFormulas && viralFormulas.length > 0) {
+        formulasHtml = `
+            <div class="section-title">🚀 ${platform === 'xhs' ? '爆款内容公式参考' : 'Viral Content Formulas'}</div>
+            ${viralFormulas.map(f => `
+                <div class="formula-card">
+                    <div class="formula-pattern">${escapeHtml(f.formula)}</div>
+                    <div class="formula-example">"${escapeHtml(f.example)}"</div>
+                    <div class="formula-why">${escapeHtml(f.why)}</div>
+                </div>`).join('')}`;
+    }
+
+    // AI analysis section
+    let aiHtml = '';
+    if (item.aiAnalysis) {
+        const ai = item.aiAnalysis;
+        const riskLabel = { low: '🟢 低风险', medium: '🟡 中等风险', high: '🔴 高风险' }[ai.contextualRisk] || '';
+        const hasRewrite = ai.rewriteContent && ai.rewriteContent.trim();
+        const uid = platform + '_' + Date.now();
+
+        aiHtml = `
+            <div class="ai-section">
+                <div class="ai-header">
+                    <span class="ai-badge">✦ AI 深度分析 ${riskLabel}</span>
+                    <span class="ai-model-tag">Claude Haiku 4.5</span>
+                </div>
+                <div class="ai-body">
+                    ${ai.aiInsight ? `<div class="ai-insight">${escapeHtml(ai.aiInsight)}</div>` : ''}
+
+                    ${hasRewrite ? `
+                    <div class="ai-rewrite">
+                        <div class="ai-rewrite-label">✦ AI 优化改写建议</div>
+                        <div class="ai-rewrite-box" id="rewrite-${uid}">
+                            ${ai.rewriteTitle ? `<span class="ai-rewrite-title-text">${escapeHtml(ai.rewriteTitle)}</span>` : ''}
+                            ${escapeHtml(ai.rewriteContent)}
+                        </div>
+                        <button class="copy-btn" onclick="copyContent('rewrite-${uid}', this)">📋 复制改写内容</button>
+                    </div>` : ''}
+
+                    ${ai.additionalTips && ai.additionalTips.length > 0 ? `
+                    <div class="ai-extra-tips">
+                        <div class="ai-rewrite-label" style="margin-bottom:10px">✦ AI 额外洞察</div>
+                        ${ai.additionalTips.map(tip => `
+                            <div class="ai-tip-item">
+                                <span class="ai-tip-dot">◆</span>
+                                <span>${escapeHtml(tip)}</span>
+                            </div>`).join('')}
+                    </div>` : ''}
+                </div>
+            </div>`;
+    } else if (item.aiAnalysis === null && !item._noAi) {
+        // AI was enabled but returned null (error), show nothing
+        aiHtml = '';
+    }
+
+    return `
+        <div class="result-panel ${isActive ? 'active' : ''}" id="panel-${platform}">
+            <div class="status-banner ${st.cls}">
+                <span class="status-icon">${st.icon}</span>
+                <span>${st.text}</span>
+            </div>
+
+            ${typeBadge}
+            ${scoresHtml}
+            ${violationsHtml}
+            <div class="divider"></div>
+            ${optHtml}
+            ${hashtagHtml ? '<div class="divider"></div>' + hashtagHtml : ''}
+            ${formulasHtml ? '<div class="divider"></div>' + formulasHtml : ''}
+            ${aiHtml}
+        </div>`;
+}
+
+function renderScore(score, label) {
+    const color = scoreColor(score);
+    return `
+        <div class="score-item">
+            ${scoreRing(score, color)}
+            <div class="score-label">${escapeHtml(label)}</div>
+        </div>`;
+}
+
+// ─────────────────────────────────────────────
+// Copy helpers
+// ─────────────────────────────────────────────
+function copyContent(elementId, btn) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text.trim()).then(() => {
+        btn.classList.add('copied');
+        btn.textContent = '✓ 已复制';
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.textContent = '📋 复制改写内容';
+        }, 2000);
+    }).catch(() => showToast('复制失败，请手动选择'));
+}
+
+// ─────────────────────────────────────────────
+// Hashtag copy
+// ─────────────────────────────────────────────
+function copyHashtag(el, text) {
+    navigator.clipboard.writeText(text).then(() => {
+        el.classList.add('copied');
+        el.textContent = '✓ 已复制';
+        setTimeout(() => {
+            el.classList.remove('copied');
+            el.textContent = text;
+        }, 1500);
+    }).catch(() => {
+        showToast('复制失败，请手动选择');
+    });
+}
+
+// ─────────────────────────────────────────────
+// Toast notification
+// ─────────────────────────────────────────────
+function showToast(msg) {
+    const existing = document.getElementById('toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = `position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+        background:rgba(0,0,0,0.82);color:#fff;padding:11px 22px;border-radius:40px;
+        font-size:14px;font-weight:500;z-index:9999;backdrop-filter:blur(10px);
+        animation:toastIn 0.25s ease;white-space:nowrap;`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2800);
+}
+
+// ─────────────────────────────────────────────
+// Fallback (local) analysis when API unavailable
+// ─────────────────────────────────────────────
+function fallbackAnalyze(title, content) {
+    const contentType = 'general';
+    return selectedPlatforms.map(platform => {
+        const rules = RULES[platform];
+        if (!rules) return null;
+
+        const violations = [];
+        const seen = new Set();
+        let complianceScore = 100;
+        const fullText = (title + ' ' + content).toLowerCase();
+
+        Object.entries(rules).forEach(([level, rule]) => {
+            rule.keywords.forEach(keyword => {
+                const kl = keyword.toLowerCase();
+                if (fullText.includes(kl) && !seen.has(kl)) {
+                    seen.add(kl);
+                    violations.push({ level, name: rule.name, keyword, color: rule.color });
+                    complianceScore -= (level === 'critical' ? 50 : level === 'high' ? 25 : level === 'medium' ? 15 : 8);
+                }
+            });
+        });
+        complianceScore = Math.max(0, complianceScore);
+
+        // Basic engagement score
+        let engagementScore = 55;
+        if (title.length >= 10 && title.length <= 20) engagementScore += 10;
+        if (/\d/.test(title)) engagementScore += 5;
+        if (content.length > 100) engagementScore += 10;
+        if (content.includes('#')) engagementScore += 5;
+        engagementScore = Math.min(100, engagementScore);
+
+        // Basic viral score
+        let viralScore = 40;
+        const hooks = ['震惊','揭秘','必看','thread','hot take','true story'];
+        hooks.forEach(h => { if ((title + content).toLowerCase().includes(h)) viralScore += 8; });
+        if (/\d/.test(title)) viralScore += 6;
+        viralScore = Math.min(100, viralScore);
+
+        const info = PLATFORM_INFO[platform];
+        return {
+            platform, platformName: info.name, platformIcon: info.icon,
+            charLimits: { title: info.titleMax, contentMin: info.contentMin, contentMax: info.contentMax },
+            complianceScore, engagementScore, viralScore, readabilityScore: 60,
+            violations, optimizations: [], hashtagSuggestions: [], viralFormulas: [],
+            contentType, contentTypeInfo: null,
+            status: complianceScore >= 80 ? 'safe' : complianceScore >= 50 ? 'warning' : 'danger'
+        };
+    }).filter(Boolean);
+}
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+updatePlatformHints();
+</script>
+
+<style>
+@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+</style>
+</body>
+</html>

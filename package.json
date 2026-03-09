@@ -1,0 +1,21 @@
+{
+  "name": "socialflow",
+  "version": "1.0.0",
+  "description": "社媒内容合规检测工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["social-media", "compliance", "xiaohongshu", "twitter", "facebook"],
+  "author": "MPChat",
+  "license": "MIT"
+}
